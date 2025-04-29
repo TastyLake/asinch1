@@ -1,37 +1,42 @@
-﻿#include <iostream>
+#include <iostream>
 #include <vector>
 #include <future>
 #include <algorithm>
 
 using namespace std;
 
-int findMinIndexAsync(const vector<int>& arr, int start, int end) {
+future<int> findMinIndexAsync(const vector<int>& arr, int start, int end) {
     promise<int> p;
     future<int> f = p.get_future();
 
-    thread t([&, start, end](promise<int> promise) {
+    thread t([&, start, end, p = move(p)]() mutable { 
         int minIndex = start;
         for (int i = start + 1; i <= end; ++i) {
             if (arr[i] < arr[minIndex]) {
                 minIndex = i;
             }
         }
-        promise.set_value(minIndex);
-        }, move(p));
+        p.set_value(minIndex);
+        });
 
-    t.detach(); 
+    t.detach();
 
-    return f.get(); 
+    return f; 
 }
+
 
 void selectionSortAsync(vector<int>& arr) {
     int n = arr.size();
 
     for (int i = 0; i < n - 1; ++i) {
-      
-        int minIndex = findMinIndexAsync(arr, i, n - 1);
+     
+        future<int> minIndexFuture = findMinIndexAsync(arr, i, n - 1);
 
-        
+    
+        int minIndex = minIndexFuture.get();
+
+
+       
         if (minIndex != i) {
             swap(arr[i], arr[minIndex]);
         }
@@ -57,3 +62,4 @@ int main() {
 
     return 0;
 }
+
